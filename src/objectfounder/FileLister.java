@@ -21,7 +21,7 @@ public class FileLister {
             folderIndex++;
             if(entry.isDirectory()){
                 for(File lowEntry : getListInFolder(entry)){
-                    System.out.println(folderIndex+ " --> " + lowEntry.getAbsolutePath()+ " " + lowEntry.getName()+ "  " + lowEntry.getUsableSpace());
+                    //System.out.println(folderIndex+ " --> " + lowEntry.getAbsolutePath()+ " " + lowEntry.getName()+ "  " + lowEntry.getUsableSpace());
                     moveFile(lowEntry, folderIndex, lowEntry.getName());
                 }
             }
@@ -32,8 +32,9 @@ public class FileLister {
         return fileList;
     }
     private void moveFile(File srcFile, int idFolder, String fileName) throws IOException{
-        String shortName = idFolder+"_"+fileName.split("_")[2];
+        String shortName = idFolder+"000"+fileName.split("_")[2];
         File dstFile = new File("C:\\smartdoc\\TRASH\\"+shortName);
+        System.out.println(srcFile + "   " + dstFile.getName() );
         Files.copy(srcFile.toPath(), dstFile.toPath());
     }
 
