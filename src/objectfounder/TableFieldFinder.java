@@ -76,9 +76,13 @@ public class TableFieldFinder {
         Imgproc.findContours(gradient, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
         List<MatOfPoint> filteredContours =findCotour(contours);
         System.out.println(contours.size()+ "   " + filteredContours.size());
-        Imgproc.drawContours(imageOrig, filteredContours, searchRightBox(filteredContours), new Scalar(255, 0 , 0), 3); //searchRightBox(contours)
+        int idRightBox = searchRightBox(filteredContours);
+        Imgproc.drawContours(imageOrig, filteredContours, idRightBox, new Scalar(255, 0 , 0), 3); //searchRightBox(contours)
         //Imgproc.minEnclosingCircle(new MatOfPoint2f(contours.get(bgestContour).toArray()), center, radius);
+        RotatedRect rc = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(idRightBox).toArray()));
+        System.out.println(rc + "  " + rc.center);
         Imgproc.drawContours(imageOrig, filteredContours, -1, new Scalar(255, 0 , 0), 3);
+        
         Imgcodecs.imwrite(dstRoot+"\\"+fileName, imageOrig);
     }
     public int getIdBigestCountour(List<MatOfPoint> contours){
