@@ -29,7 +29,7 @@ import ru.akor.barcodeDetecter.BarcodeDetector;
  *
  * @author korgan
  */
-public class TableFieldFinder {
+public class TableFieldFinderIter {
     boolean moved = false;
     String dstPath = null;
     String dstRoot = "C:\\smartdoc\\SORTED\\";
@@ -52,14 +52,18 @@ public class TableFieldFinder {
             System.err.println("Файл не загружен");
             return;
         }
-        //Mat image = imageOrig.clone();
+        MatOfPoint rightContour =  getRightContour(imageOrig, fileName);
+        //Imgproc.drawContours(imageOrig, filteredContours, -1, new Scalar(255, 0 , 0), 3);
         
+        
+    }
+    private MatOfPoint getRightContour(Mat imageOrig, String fileName){
         Double heigh = imageOrig.rows()/5.5;
         Double xStart = imageOrig.cols()/2.0;
         System.out.println("ImgWidth  " + imageOrig.cols() + " ImgHeigh " + imageOrig.rows()
                 + " RectStart " + xStart + " imgWidth " + (heigh.intValue()));
         Rect rectCrop = new Rect(xStart.intValue(), 0, imageOrig.cols()-xStart.intValue(), heigh.intValue());
-        //Rect rectCrop = new Rect(0, 0, imageOrig.cols(), imageOrig.rows()/3);
+        System.out.println(rectCrop);
         Mat image = new Mat(imageOrig, rectCrop);
         Imgproc.cvtColor(image, image, Imgproc.COLOR_RGB2GRAY);
         int ddepth  = CvType.CV_32F;
@@ -67,28 +71,32 @@ public class TableFieldFinder {
         Mat gradY = new Mat();
         Imgproc.Sobel(image, gradX, ddepth, 1, 0);
         Imgproc.Sobel(image, gradY, ddepth, 0, 1);
-        Mat gradient = new Mat();
-        Core.subtract(gradX, gradY, gradient);
-        Core.convertScaleAbs(gradient, gradient);
-        Imgproc.blur(gradient, gradient, new Size(1, 1));
-        Imgproc.threshold(gradient, gradient, 20, 255, Imgproc.THRESH_BINARY);
-        Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(1, 1));
-        Imgproc.morphologyEx(gradient, gradient, Imgproc.MORPH_CLOSE, kernel);
-        Point anchor = new Point();
-        Imgproc.erode(gradient, gradient, kernel, anchor, 50);
-        Imgproc.dilate(gradient, gradient, kernel);
-        List<MatOfPoint> contours = new ArrayList<>();
-        Imgproc.findContours(gradient, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
-        List<MatOfPoint> filteredContours =findCotour(contours);
-        System.out.println(contours.size()+ "   " + filteredContours.size());
-        int idRightBox = searchRightBox(filteredContours);
-        Imgproc.drawContours(gradient, filteredContours, idRightBox, new Scalar(255, 0 , 0), 5); //searchRightBox(contours)
-        //Imgproc.minEnclosingCircle(new MatOfPoint2f(contours.get(bgestContour).toArray()), center, radius);
-        //RotatedRect rc = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(idRightBox).toArray()));
-        //System.out.println(rc + "  " + rc.center);
-        //Imgproc.drawContours(imageOrig, filteredContours, idRightBox, new Scalar(255, 0 , 0), 3);
-        
-        Imgcodecs.imwrite(dstRoot+"\\"+fileName, gradient);
+        Mat gradientOrig = new Mat();
+        Core.subtract(gradX, gradY, gradientOrig);
+        Core.convertScaleAbs(gradientOrig, gradientOrig);
+        Imgproc.blur(gradientOrig, gradientOrig, new Size(1, 1));
+        int idRightBox = -1;
+        int unknowParametr = 250;
+        List<MatOfPoint> filteredContours = new ArrayList<>();
+        while(idRightBox == -1 && unknowParametr > 0){
+            Mat gradient = new Mat();
+            unknowParametr = unknowParametr-10;
+            Imgproc.threshold(gradientOrig, gradient, unknowParametr, 250, Imgproc.THRESH_BINARY);
+            System.out.println("Now "+unknowParametr);
+            Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(1, 1));
+            Imgproc.morphologyEx(gradient, gradient, Imgproc.MORPH_CLOSE, kernel);
+            Point anchor = new Point();
+            Imgproc.erode(gradient, gradient, kernel, anchor, 300);
+            Imgproc.dilate(gradient, gradient, kernel);
+            List<MatOfPoint> contours = new ArrayList<>();
+            Imgproc.findContours(gradient, contours, new Mat(), Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+            filteredContours = findCotour(contours);
+            idRightBox = searchRightBox(filteredContours); 
+        }
+        writeBox(gradientOrig, filteredContours.get(idRightBox), dstRoot+"\\rrr_"+fileName);
+        Imgproc.drawContours(gradientOrig, filteredContours, idRightBox, new Scalar(255, 0 , 0), 30);
+        Imgcodecs.imwrite(dstRoot+"\\"+fileName, gradientOrig);
+        return null;
     }
     public int getIdBigestCountour(List<MatOfPoint> contours){
         double maxSize = 0;
@@ -99,13 +107,13 @@ public class TableFieldFinder {
                 id = contourId;
             }
         }
-        System.out.println("Te bigest contour "+id);
+        //System.out.println("Te bigest contour "+id);
         return id;
     }
     public List<MatOfPoint> findCotour(List<MatOfPoint> contours){
         List<MatOfPoint> forRet = new ArrayList<>();
         for(int i =0; i < contours.size(); i++){
-            if(Imgproc.contourArea(contours.get(i)) > 100000.00){
+            if(Imgproc.contourArea(contours.get(i)) > 90000.00){
                 forRet.add(contours.get(i));
             }
         }
@@ -118,7 +126,7 @@ public class TableFieldFinder {
             RotatedRect rc = Imgproc.minAreaRect(mop);
             double soot = rc.size.width / rc.size.height;
             System.out.println(contourId + "  " + soot);
-            if(soot<2.8){
+            if(soot<3.2){
                 id = contourId;
             } else {
             }
@@ -140,5 +148,20 @@ public class TableFieldFinder {
         }
         System.out.println("Right  "+id);
         return id;
+    }
+    private void writeBox(Mat startImag, MatOfPoint contour, String fileName){
+        MatOfPoint2f mop = new MatOfPoint2f(contour.toArray());
+        RotatedRect rc = Imgproc.minAreaRect(mop);
+        Rect box = rc.boundingRect();
+        System.out.println(rc + "   "+box );
+        if(box.x<0){
+            box.x=0;
+        }
+        if(box.y<0){
+            box.y=0;
+        }
+        Mat image;
+        image = new Mat(startImag, box);
+        Imgcodecs.imwrite(fileName, image);
     }
 }

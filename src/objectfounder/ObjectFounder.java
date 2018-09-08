@@ -36,7 +36,7 @@ public class ObjectFounder {
      */
     public static void main(String[] args) throws IOException {
         // TODO code application logic here
-        TableFieldFinder md = new TableFieldFinder();
+        TableFieldFinderIter md = new TableFieldFinderIter();
         md.work();
     }
 }
